@@ -105,11 +105,25 @@ class BayesianReg:
 
 	def norm(self):
 		CPM = ContProbMonad()
-		model_evidence = CPM.bind(self.prior_dist, self.model)
-		normalizer = 1.0
-		for data in self.data:
-			normalizer *= model_evidence.density(data)
-		print(normalizer)
+
+		def likelihoodmodel(param):
+			def likelihoodmodeldens(l):
+				a = 1.0
+				for data in l:
+					a *= ((self.model)(param)).density(data)
+				return a
+			return ProbDist(likelihoodmodeldens)
+
+		self.likelihoodmodel = likelihoodmodel
+		self.model_evidence = CPM.bind(self.prior_dist, likelihoodmodel)
+		normalizer = self.model_evidence.density(self.data)
+
+		#model_evidence = CPM.bind(self.prior_dist, self.model)
+		#normalizer = 1.0
+		#for data in self.data:
+		#	normalizer *= model_evidence.density(data)
+
+		#print(normalizer)
 		dens = lambda x : (self.posterior_dist.density(x)/normalizer)
 		self.posterior_dist_normalized = ProbDist(dens)
 		return self.posterior_dist_normalized
@@ -121,7 +135,7 @@ class BayesianReg:
 x = np.linspace(0, 100, 100)
 
 prior = Norm_Dist(0.0, 3.0)
-data = [4.0]
+data = [4.0, 5.0]
 model = lambda p : Norm_Dist(p, 0.5)
 BR = BayesianReg(model)
 BR.sample(prior)
